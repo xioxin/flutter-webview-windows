@@ -40,6 +40,10 @@ constexpr auto kMethodSetVirtualHostNameMapping = "setVirtualHostNameMapping";
 constexpr auto kMethodClearVirtualHostNameMapping =
     "clearVirtualHostNameMapping";
 constexpr auto kMethodClearCookies = "clearCookies";
+constexpr auto kMethodCallDevToolsProtocolMethod = "callDevToolsProtocolMethod";
+
+
+
 constexpr auto kMethodClearCache = "clearCache";
 constexpr auto kMethodSetCacheDisabled = "setCacheDisabled";
 constexpr auto kMethodSetPopupWindowPolicy = "setPopupWindowPolicy";
@@ -608,6 +612,28 @@ void WebviewBridge::HandleMethodCall(
       return result->Success();
     }
     return result->Error(kMethodFailed);
+  }
+
+  // callDevToolsProtocolMethod
+  if (method_name.compare(kMethodCallDevToolsProtocolMethod) == 0) {
+    const flutter::EncodableList* list = std::get_if<flutter::EncodableList>(method_call.arguments());
+    if (!list || list->size() != 2) {
+      return result->Error(kErrorNotSupported);
+    }
+    const auto methodName = std::get_if<std::string>(&(*list)[0]);
+    const auto methodParams = std::get_if<std::string>(&(*list)[1]);
+    
+    std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+          shared_result = std::move(result);
+
+    webview_->CallDevToolsProtocolMethod(*methodName, *methodParams, [shared_result](int errorCode, const std::string& json_result) {
+      if (errorCode == 0) {
+        shared_result->Success(json_result);
+      } else {
+        shared_result->Error(kScriptFailed, "CallDevToolsProtocolMethod failed.");
+      }
+    });
+    return;
   }
 
   // clearCache

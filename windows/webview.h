@@ -92,11 +92,13 @@ struct EventRegistrations {
 class Webview {
  public:
   friend class WebviewHost;
+  typedef std::function<void(int errorCode, const std::string& json)> ProtocolMethodCompletedCallback;
 
   typedef std::function<void(const std::string&)> UrlChangedCallback;
   typedef std::function<void(WebviewLoadingState)> LoadingStateChangedCallback;
-  typedef std::function<void(COREWEBVIEW2_WEB_ERROR_STATUS)>
-      OnLoadErrorCallback;
+  typedef std::function<void(const std::string&)> GetCookieEventCallback;
+
+  typedef std::function<void(COREWEBVIEW2_WEB_ERROR_STATUS)> OnLoadErrorCallback;
   typedef std::function<void(WebviewHistoryChanged)> HistoryChangedCallback;
   typedef std::function<void(const std::string&)> DevtoolsProtocolEventCallback;
   typedef std::function<void(const std::string&)> DocumentTitleChangedCallback;
@@ -153,6 +155,9 @@ class Webview {
   bool SetBackgroundColor(int32_t color);
   bool Suspend();
   bool Resume();
+
+  bool CallDevToolsProtocolMethod(const std::string& methodName, const std::string& methodParams, ProtocolMethodCompletedCallback callback);
+
 
   bool SetVirtualHostNameMapping(const std::string& hostName,
                                  const std::string& path,

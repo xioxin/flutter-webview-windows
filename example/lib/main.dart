@@ -136,6 +136,33 @@ class _ExampleBrowser extends State<ExampleBrowser> {
                   onPressed: () {
                     _controller.openDevTools();
                   },
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_forever),
+                  tooltip: 'del cookies',
+                  splashRadius: 20,
+                  onPressed: () {
+                    _controller.clearCookies();
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.cookie),
+                  tooltip: 'getAllCookies',
+                  splashRadius: 20,
+                  onPressed: () async {
+                    final cookies = await _controller.getAllCookies();
+                    print(cookies);
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.cookie_outlined),
+                  tooltip: 'getCookie',
+                  splashRadius: 20,
+                  onPressed: () async {
+                    final cookies = await _controller
+                        .getCookies([Uri.parse('https://flutter.dev/')]);
+                    print(cookies);
+                  },
                 )
               ]),
             ),

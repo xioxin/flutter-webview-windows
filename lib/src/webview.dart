@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -206,6 +207,9 @@ class WebviewController extends ValueNotifier<WebviewValue> {
           case 'containsFullScreenElementChanged':
             _containsFullScreenElementChangedStreamController.add(map['value']);
             break;
+          case 'devtoolsProtocolMethodCompletedEvent':
+            print(map['value']);
+            break;
         }
       });
 
@@ -387,6 +391,53 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     }
     assert(value.isInitialized);
     return _methodChannel.invokeMethod('clearCookies');
+  }
+
+  Future<dynamic> callDevToolsProtocolMethod(String methodName,
+      [String? methodParams]) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    final jsonText = await _methodChannel.invokeMethod(
+        'callDevToolsProtocolMethod', [methodName, methodParams ?? '{}']);
+    return json.decode(jsonText);
+  }
+
+  Cookie _objectToCookie(dynamic e) {
+    final expiresNumber = e['expires'] as num;
+    final expires = expiresNumber < 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch((expiresNumber * 1000).toInt());
+    final maxAge = expires?.difference(DateTime.now()).inSeconds;
+    return Cookie(e['name'] as String, e['value'] as String)
+      ..domain = e['domain'] as String
+      ..path = e['path'] as String
+      ..httpOnly = e['httpOnly'] as bool
+      ..secure = e['secure'] as bool
+      ..maxAge = maxAge
+      ..expires = expires;
+  }
+
+  /// Returns all browser cookies. Depending on the backend support.
+  FutureOr<List<Cookie>?> getAllCookies() async {
+    final data = await callDevToolsProtocolMethod('Network.getAllCookies');
+    if (data != null && data['cookies'] is List) {
+      final cookies = data['cookies'] as List<dynamic>;
+      return cookies.map((e) => _objectToCookie(e)).toList();
+    }
+    return null;
+  }
+
+  /// Returns all browser cookies for the current URL. Depending on the backend support.
+  FutureOr<List<Cookie>?> getCookies(List<Uri> urls) async {
+    final data = await callDevToolsProtocolMethod('Network.getCookies',
+        json.encode({'urls': urls.map((e) => e.toString())}));
+    if (data != null && data['cookies'] is List) {
+      final cookies = data['cookies'] as List<dynamic>;
+      return cookies.map((e) => _objectToCookie(e)).toList();
+    }
+    return null;
   }
 
   /// Clears browser cache.

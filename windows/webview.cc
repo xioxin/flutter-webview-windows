@@ -405,6 +405,21 @@ bool Webview::OpenDevTools() {
   return true;
 }
 
+bool Webview::CallDevToolsProtocolMethod(const std::string& methodName, const std::string& methodParams, ProtocolMethodCompletedCallback callback) {
+  if (!IsValid()) {
+    return false;
+  }
+  return webview_->CallDevToolsProtocolMethod(
+        util::Utf16FromUtf8(methodName).c_str(), util::Utf16FromUtf8(methodParams).c_str(),
+        Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
+      [this, callback](HRESULT errorCode, LPCWSTR returnObjectAsJson) -> HRESULT {
+        std::string json = util::Utf8FromUtf16(returnObjectAsJson);
+        callback((int) errorCode, json);
+        return S_OK;
+      })
+      .Get()) == S_OK;
+}
+
 bool Webview::ClearCookies() {
   if (!IsValid()) {
     return false;
