@@ -432,7 +432,7 @@ class WebviewController extends ValueNotifier<WebviewValue> {
   /// Returns all browser cookies for the current URL. Depending on the backend support.
   FutureOr<List<Cookie>?> getCookies(List<Uri> urls) async {
     final data = await callDevToolsProtocolMethod('Network.getCookies',
-        json.encode({'urls': urls.map((e) => e.toString())}));
+        json.encode({'urls': urls.map((e) => e.toString()).toList()}));
     if (data != null && data['cookies'] is List) {
       final cookies = data['cookies'] as List<dynamic>;
       return cookies.map((e) => _objectToCookie(e)).toList();
