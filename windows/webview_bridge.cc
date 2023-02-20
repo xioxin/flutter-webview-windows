@@ -33,6 +33,7 @@ constexpr auto kMethodSetPointerButton = "setPointerButton";
 constexpr auto kMethodSetScrollDelta = "setScrollDelta";
 constexpr auto kMethodSetUserAgent = "setUserAgent";
 constexpr auto kMethodSetBackgroundColor = "setBackgroundColor";
+constexpr auto kMethodSetZoomFactor = "setZoomFactor";
 constexpr auto kMethodOpenDevTools = "openDevTools";
 constexpr auto kMethodSuspend = "suspend";
 constexpr auto kMethodResume = "resume";
@@ -69,6 +70,22 @@ static const std::optional<std::pair<double, double>> GetPointFromArgs(
     return std::nullopt;
   }
   return std::make_pair(*x, *y);
+}
+
+static const std::optional<std::tuple<double, double, double>>
+GetPointAndScaleFactorFromArgs(const flutter::EncodableValue* args) {
+  const flutter::EncodableList* list =
+      std::get_if<flutter::EncodableList>(args);
+  if (!list || list->size() != 3) {
+    return std::nullopt;
+  }
+  const auto x = std::get_if<double>(&(*list)[0]);
+  const auto y = std::get_if<double>(&(*list)[1]);
+  const auto z = std::get_if<double>(&(*list)[2]);
+  if (!x || !y || !z) {
+    return std::nullopt;
+  }
+  return std::make_tuple(*x, *y, *z);
 }
 
 static const std::string& GetCursorName(const HCURSOR cursor) {
@@ -400,12 +417,15 @@ void WebviewBridge::HandleMethodCall(
     return result->Error(kErrorInvalidArgs);
   }
 
-  // setSize: [double width, double height]
+  // setSize: [double width, double height, double scale_factor]
   if (method_name.compare(kMethodSetSize) == 0) {
-    auto size = GetPointFromArgs(method_call.arguments());
+    auto size = GetPointAndScaleFactorFromArgs(method_call.arguments());
     if (size) {
-      webview_->SetSurfaceSize(static_cast<size_t>(size->first),
-                               static_cast<size_t>(size->second));
+      const auto [width, height, scale_factor] = size.value();
+
+      webview_->SetSurfaceSize(static_cast<size_t>(width),
+                               static_cast<size_t>(height),
+                               static_cast<float>(scale_factor));
 
       texture_bridge_->Start();
       return result->Success();
@@ -594,6 +614,18 @@ void WebviewBridge::HandleMethodCall(
       }
       return result->Error(kErrorNotSupported,
                            "Setting the background color failed.");
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // setZoomFactor: double
+  if (method_name.compare(kMethodSetZoomFactor) == 0) {
+    if (const auto factor = std::get_if<double>(method_call.arguments())) {
+      if (webview_->SetZoomFactor(*factor)) {
+        return result->Success();
+      }
+      return result->Error(kErrorNotSupported,
+                           "Setting the zoom factor failed.");
     }
     return result->Error(kErrorInvalidArgs);
   }

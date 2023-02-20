@@ -373,20 +373,24 @@ void Webview::RegisterEventHandlers() {
       &event_registrations_.contains_fullscreen_element_changed_token_);
 }
 
-void Webview::SetSurfaceSize(size_t width, size_t height) {
+void Webview::SetSurfaceSize(size_t width, size_t height, float scale_factor) {
   if (!IsValid()) {
     return;
   }
 
   if (surface_ && width > 0 && height > 0) {
-    surface_->put_Size({(float)width, (float)height});
+    scale_factor_ = scale_factor;
+    auto scaled_width = width * scale_factor;
+    auto scaled_height = height * scale_factor;
 
     RECT bounds;
     bounds.left = 0;
     bounds.top = 0;
-    bounds.right = static_cast<LONG>(width);
-    bounds.bottom = static_cast<LONG>(height);
+    bounds.right = static_cast<LONG>(scaled_width);
+    bounds.bottom = static_cast<LONG>(scaled_height);
 
+    surface_->put_Size({scaled_width, scaled_height});
+    webview_controller_->put_RasterizationScale(scale_factor);
     if (webview_controller_->put_Bounds(bounds) != S_OK) {
       std::cerr << "Setting webview bounds failed." << std::endl;
     }
@@ -475,14 +479,21 @@ bool Webview::SetBackgroundColor(int32_t color) {
   return webview_controller_->put_DefaultBackgroundColor(webview_color) == S_OK;
 }
 
+bool Webview::SetZoomFactor(double factor) {
+  if (!IsValid()) {
+    return false;
+  }
+  return webview_controller_->put_ZoomFactor(factor) == S_OK;
+}
+
 void Webview::SetCursorPos(double x, double y) {
   if (!IsValid()) {
     return;
   }
 
   POINT point;
-  point.x = static_cast<LONG>(x);
-  point.y = static_cast<LONG>(y);
+  point.x = static_cast<LONG>(x * scale_factor_);
+  point.y = static_cast<LONG>(y * scale_factor_);
   last_cursor_pos_ = point;
 
   // https://docs.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.774.44
@@ -528,8 +539,8 @@ void Webview::SetPointerUpdate(int32_t pointer,
   }
 
   POINT point;
-  point.x = static_cast<LONG>(x);
-  point.y = static_cast<LONG>(y);
+  point.x = static_cast<LONG>(x * scale_factor_);
+  point.y = static_cast<LONG>(y * scale_factor_);
 
   RECT rect;
   rect.left = point.x - 2;

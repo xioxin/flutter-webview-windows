@@ -254,6 +254,7 @@ class _ExampleBrowser extends State<ExampleBrowser> {
   @override
   void dispose() {
     _subscriptions.forEach((s) => s.cancel());
+    _controller.dispose();
     super.dispose();
   }
 }
